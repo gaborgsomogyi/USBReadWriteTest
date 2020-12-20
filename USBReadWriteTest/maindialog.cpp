@@ -194,7 +194,7 @@ DWORD WINAPI testActionThread(LPVOID lpParameter)
 		mainDialogCtrl->m_progressEdit.SetString(buf);
 
 		DWORD dwBytesRead = 0;
-		bool readSuccess = ReadFile(disk, sectorData, dwBytesToCheck, &dwBytesRead, NULL);
+		bool readSuccess = ReadFile(disk, readSectorData, dwBytesToCheck, &dwBytesRead, NULL);
 		if (!readSuccess || dwBytesRead != dwBytesToCheck)
 		{
 			unableToReadSectors += sectorsToWrite;
