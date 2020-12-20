@@ -136,12 +136,8 @@ DWORD WINAPI testActionThread(LPVOID lpParameter)
 	ULONGLONG totalBytes = totalSectors * driveInfo.BytesPerSector;
 
 	while (totalSectors % sectorsToWrite != 0)
-	{
 		if (--totalSectors == 0)
-		{
 			ErrorExit(TEXT("Trying to find out number of sectors to write"));
-		}
-	}
 
 	HANDLE hHeap = GetProcessHeap();
 	DWORD dwBytesToCheck = sectorsToWrite * driveInfo.BytesPerSector;
@@ -176,6 +172,9 @@ DWORD WINAPI testActionThread(LPVOID lpParameter)
 			mainDialogCtrl->m_writeErrorEdit.SetString(buf);
 		}
 	}
+
+	if (SetFilePointer(disk, 0, 0, FILE_BEGIN) != 0)
+		ErrorExit(TEXT("SetFilePointer"));
 
 	progress = 0;
 	lprogress = -1;
