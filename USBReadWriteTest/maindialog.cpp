@@ -61,6 +61,9 @@ void MainDialogCtrl::SetGUIDefaults(void)
 	m_progress.SetRange(0, 100);
 	m_progress.SetPos(0);
 	m_actionEdit.SetEnable(false);
+	m_writeErrorEdit.SetEnable(false);
+	m_readErrorEdit.SetEnable(false);
+	m_dataErrorEdit.SetEnable(false);
 	m_progressEdit.SetEnable(false);
 
 	GUID diskClassDeviceInterfaceGuid = GUID_DEVINTERFACE_DISK;
