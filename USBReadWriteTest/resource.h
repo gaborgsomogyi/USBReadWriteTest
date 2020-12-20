@@ -8,9 +8,12 @@
 #define IDC_DEVICE_COMBO                1051
 #define IDC_BUT_TEST                    1052
 #define IDC_PROGRESS                    1053
-#define IDC_EDIT_PROGRESS               1055
 #define IDC_PROGRESS_EDIT               1055
 #define IDC_ACTION_EDIT                 1056
+#define IDC_WRITE_ERROR_EDIT            1057
+#define IDC_READ_ERROR_EDIT             1058
+#define IDC_READ_ERROR_EDIT2            1059
+#define IDC_DATA_ERROR_EDIT             1059
 #define IDC_STATIC                      -1
 
 // Next default values for new objects

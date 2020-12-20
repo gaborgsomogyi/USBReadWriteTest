@@ -14,6 +14,9 @@ public:
 	ComboBox m_guiAnimList;
 	ProgressBar m_progress;
 	EditBox m_actionEdit;
+	EditBox m_writeErrorEdit;
+	EditBox m_readErrorEdit;
+	EditBox m_dataErrorEdit;
 	EditBox m_progressEdit;
 	Button m_guiTest;
 	Button m_guiExit;

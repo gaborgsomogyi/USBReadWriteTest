@@ -19,6 +19,9 @@ MainDialogCtrl::MainDialogCtrl(HWND hwnd) :
 	m_guiAnimList(hwnd, IDC_DEVICE_COMBO),
 	m_progress(hwnd, IDC_PROGRESS),
 	m_actionEdit(hwnd, IDC_ACTION_EDIT),
+	m_writeErrorEdit(hwnd, IDC_WRITE_ERROR_EDIT),
+	m_readErrorEdit(hwnd, IDC_READ_ERROR_EDIT),
+	m_dataErrorEdit(hwnd, IDC_DATA_ERROR_EDIT),
 	m_progressEdit(hwnd, IDC_PROGRESS_EDIT),
 	m_guiTest(hwnd, IDC_BUT_TEST),
 	m_guiExit(hwnd, IDC_BUT_EXIT)
@@ -108,6 +111,7 @@ void MainDialogCtrl::SetGUIDefaults(void)
 DWORD WINAPI testActionThread(LPVOID lpParameter)
 {
 	MainDialogCtrl* mainDialogCtrl = (MainDialogCtrl*)lpParameter;
+	int sectorsToWrite = 512;
 	int progress = 0;
 	int lprogress = -1;
 	char buf[256];
@@ -128,15 +132,27 @@ DWORD WINAPI testActionThread(LPVOID lpParameter)
 	ULONGLONG totalSectors = lastSector + 1;
 	ULONGLONG totalBytes = totalSectors * driveInfo.BytesPerSector;
 
+	while (totalSectors % sectorsToWrite != 0)
+	{
+		if (--totalSectors == 0)
+		{
+			ErrorExit(TEXT("Trying to find out number of sectors to write"));
+		}
+	}
+
 	HANDLE hHeap = GetProcessHeap();
-	unsigned char* sectorData = (unsigned char*)HeapAlloc(hHeap, HEAP_ZERO_MEMORY, driveInfo.BytesPerSector);
-	for (DWORD i = 0; i < driveInfo.BytesPerSector; ++i)
+	DWORD dwBytesToCheck = sectorsToWrite * driveInfo.BytesPerSector;
+	unsigned char* sectorData = (unsigned char*)HeapAlloc(hHeap, HEAP_ZERO_MEMORY, dwBytesToCheck);
+	for (DWORD i = 0; i < dwBytesToCheck; ++i)
 		sectorData[i] = rand() & 0xFF;
 
 	progress = 0;
 	lprogress = -1;
 	mainDialogCtrl->m_actionEdit.SetString("Writing");
-	for (ULONGLONG i = 0; i < totalSectors; ++i)
+	mainDialogCtrl->m_writeErrorEdit.SetString("0");
+	mainDialogCtrl->m_readErrorEdit.SetString("0");
+	mainDialogCtrl->m_dataErrorEdit.SetString("0");
+	for (ULONGLONG i = 0; i < totalSectors; i += sectorsToWrite)
 	{
 		progress = i * 100 / totalSectors;
 		if (progress != lprogress)
@@ -145,22 +161,24 @@ DWORD WINAPI testActionThread(LPVOID lpParameter)
 			lprogress = progress;
 		}
 
-		if (i % 0x8F == 0)
-		{
-			sprintf_s(buf, sizeof(buf), "%lld/%lld", i, totalSectors);
-			mainDialogCtrl->m_progressEdit.SetString(buf);
-		}
+		sprintf_s(buf, sizeof(buf), "%lld/%lld", i, totalSectors);
+		mainDialogCtrl->m_progressEdit.SetString(buf);
+
 		DWORD dwBytesWritten = 0;
-		bool writeSuccess = WriteFile(disk, sectorData, driveInfo.BytesPerSector, &dwBytesWritten, NULL);
-		if (!writeSuccess || dwBytesWritten != driveInfo.BytesPerSector)
-			unableToWriteSectors += 1;
+		bool writeSuccess = WriteFile(disk, sectorData, dwBytesToCheck, &dwBytesWritten, NULL);
+		if (!writeSuccess || dwBytesWritten != dwBytesToCheck)
+		{
+			unableToWriteSectors += sectorsToWrite;
+			sprintf_s(buf, sizeof(buf), "%lld", unableToWriteSectors);
+			mainDialogCtrl->m_writeErrorEdit.SetString(buf);
+		}
 	}
 
 	progress = 0;
 	lprogress = -1;
-	unsigned char* readSectorData = (unsigned char*)HeapAlloc(hHeap, HEAP_ZERO_MEMORY, driveInfo.BytesPerSector);
+	unsigned char* readSectorData = (unsigned char*)HeapAlloc(hHeap, HEAP_ZERO_MEMORY, dwBytesToCheck);
 	mainDialogCtrl->m_actionEdit.SetString("Reading");
-	for (ULONGLONG i = 0; i < totalSectors; ++i)
+	for (ULONGLONG i = 0; i < totalSectors; i += sectorsToWrite)
 	{
 		progress = i * 100 / totalSectors;
 		if (progress != lprogress)
@@ -169,17 +187,23 @@ DWORD WINAPI testActionThread(LPVOID lpParameter)
 			lprogress = progress;
 		}
 
-		if (i % 0x8F == 0)
-		{
-			sprintf_s(buf, sizeof(buf), "%lld/%lld", i, totalSectors);
-			mainDialogCtrl->m_progressEdit.SetString(buf);
-		}
+		sprintf_s(buf, sizeof(buf), "%lld/%lld", i, totalSectors);
+		mainDialogCtrl->m_progressEdit.SetString(buf);
+
 		DWORD dwBytesRead = 0;
-		bool readSuccess = ReadFile(disk, sectorData, driveInfo.BytesPerSector, &dwBytesRead, NULL);
-		if (!readSuccess || dwBytesRead != driveInfo.BytesPerSector)
-			unableToReadSectors += 1;
-		if (readSuccess && memcmp(readSectorData, sectorData, driveInfo.BytesPerSector) != 0)
-			badSectors += 1;
+		bool readSuccess = ReadFile(disk, sectorData, dwBytesToCheck, &dwBytesRead, NULL);
+		if (!readSuccess || dwBytesRead != dwBytesToCheck)
+		{
+			unableToReadSectors += sectorsToWrite;
+			sprintf_s(buf, sizeof(buf), "%lld", unableToReadSectors);
+			mainDialogCtrl->m_readErrorEdit.SetString(buf);
+		}
+		if (readSuccess && memcmp(readSectorData, sectorData, dwBytesToCheck) != 0)
+		{
+			badSectors += sectorsToWrite;
+			sprintf_s(buf, sizeof(buf), "%lld", badSectors);
+			mainDialogCtrl->m_dataErrorEdit.SetString(buf);
+		}
 	}
 
 	HeapFree(hHeap, 0, readSectorData);
